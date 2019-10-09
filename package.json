@@ -1,0 +1,35 @@
+{
+  "name": "sesametime-sync-google-calendar",
+  "version": "1.0.0",
+  "description": "Syncs sesametime holiday events to google calendar selected events",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "tsc && node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavidBM/sesametime-sync-google-calendar.git"
+  },
+  "keywords": [
+    "sesametime",
+    "google-calendar"
+  ],
+  "author": "David Bonet <webbonet@gmail.com>",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/DavidBM/sesametime-sync-google-calendar/issues"
+  },
+  "homepage": "https://github.com/DavidBM/sesametime-sync-google-calendar#readme",
+  "devDependencies": {
+    "@types/node": "^12.7.12",
+    "jest": "^24.9.0"
+  },
+  "dependencies": {
+    "@types/request-promise-native": "^1.0.17",
+    "axios": "^0.19.0",
+    "googleapis": "^39.2.0",
+    "request-promise-native": "^1.0.7",
+    "typescript": "^3.6.3"
+  }
+}

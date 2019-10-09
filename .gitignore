@@ -1,6 +1,9 @@
 # Google credentials
 credentials.json
 
+#ignore compiled files
+dist
+
 # Logs
 logs
 *.log

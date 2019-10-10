@@ -17,6 +17,7 @@ type GetUserVacationResponse = {
 type SesameUserVacation = {
 	data: Array<string> | null,
 	year: string,
+	name: string,
 };
 
 export type SesameUserWithVacations = {
@@ -67,6 +68,7 @@ export class SesametimeService {
 
 		response.data
 		.filter(current => Array.isArray(current.Vacation.data))
+		.filter(current => current.Vacation.name !== 'Fines de semana'))
 		.forEach(current => accumulator.push(...(current.Vacation.data as Array<string>)));
 
 		const vacations = autoattachHolidays(accumulator);
@@ -138,6 +140,7 @@ function isSesameUserVacation(response: unknown): response is SesameUserVacation
 	const object = response as any;
 
 	if (typeof object.year !== 'string') return false;
+	if (typeof object.name !== 'string') return false;
 	if (!Array.isArray(object.data) && object.data !== null) return false;
 	if (object.data !== null && !object.data.every((d: any) => typeof d === 'string')) return false;
 

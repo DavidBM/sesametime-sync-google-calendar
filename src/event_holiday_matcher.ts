@@ -41,7 +41,7 @@ function findUnmatched(calendarEvents: GoogleCalendarEvent[], holidays: SignedUn
 	.filter(event => {
 		return event.description.includes('Do not modify this text.')
 		&& event.description.includes('%%%%%~~~~~%%%%%~~~~~%%%%%')
-		&& event.description.includes('sesame-event-id:');
+		&& event.description.includes('-event-id:');
 	});
 }
 

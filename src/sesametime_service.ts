@@ -68,7 +68,7 @@ export class SesametimeService {
 
 		response.data
 		.filter(current => Array.isArray(current.Vacation.data))
-		.filter(current => current.Vacation.name !== 'Fines de semana'))
+		.filter(current => current.Vacation.name !== 'Fines de semana')
 		.forEach(current => accumulator.push(...(current.Vacation.data as Array<string>)));
 
 		const vacations = autoattachHolidays(accumulator);

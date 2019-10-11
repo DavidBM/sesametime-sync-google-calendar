@@ -10,17 +10,19 @@ Steps:
 **/
 
 import * as request from 'request-promise-native';
+import {iterate} from 'iterated-pipes';
 import {CredentialsService} from './credentials_service';
-import {GoogleCalendarService} from './google_calendar_service';
+import {GoogleCalendarService, GoogleCalendarEvent} from './google_calendar_service';
 import {SesametimeService} from './sesametime_service';
-import {matchEventHolidays} from './event_holiday_matcher';
+import {matchEventHolidays, SignedHoliday} from './event_holiday_matcher';
+
+type VacationAndEvent = {holiday: SignedHoliday, event: GoogleCalendarEvent};
 
 async function execute() {
 
 	const credentialsService = new CredentialsService('./credentials.json', request);
 
 	const googleCredentials = await credentialsService.getGoogleToken();
-
 	const googleCalendarService = new GoogleCalendarService(request, googleCredentials);
 
 	const calendarsToSync = await credentialsService.getCalendarToSync();
@@ -31,46 +33,56 @@ async function execute() {
 
 	const {toUpdate, toCreate, toDelete} = matchEventHolidays(events, holidays);
 
+	const updateCallbacks = toUpdate
+	.map(event => () => updateGoogleEvent(googleCalendarService, calendarsToSync[0], event));
+
+	const createCallbacks = toCreate
+	.map(event => () => createGoogleEvent(googleCalendarService, calendarsToSync[0], event));
+
+	const deleteCallbacks = toDelete
+	.map(event => () => deleteGoogleEvent(googleCalendarService, calendarsToSync[0], event));
+
+	const callbacks = updateCallbacks.concat(createCallbacks, deleteCallbacks);
+
 	console.log('Update: ' , toUpdate.length, '\n\nCreate: ', toCreate.length, '\n\nDelete: ', toDelete.length);
 
-	for ( const update of toUpdate ) {
-		const endDate = new Date(update.holiday.vacation[update.holiday.vacation.length - 1]);
-		endDate.setDate(endDate.getDate() + 1);
-
-		await googleCalendarService.updateEvent(
-			calendarsToSync[0],
-			update.event.id,
-			`Holidays ${update.holiday.user.name} ${update.holiday.user.surname}`,
-			generateDescription(update.holiday.signature),
-			update.holiday.vacation[0],
-			endDate.getFullYear()  + '-' + (endDate.getMonth() + 1) + '-' + endDate.getDate(),
-		);
-	}
-
-	for ( const create of toCreate ) {
-		const endDate = new Date(create.vacation[create.vacation.length - 1]);
-		endDate.setDate(endDate.getDate() + 1);
-
-		await googleCalendarService.createEvent(
-			calendarsToSync[0],
-			`Holidays ${create.user.name} ${create.user.surname}`,
-			generateDescription(create.signature),
-			create.vacation[0],
-			endDate.getFullYear()  + '-' + (endDate.getMonth() + 1) + '-' + endDate.getDate(),
-		);
-	}
-
-	for ( const deleteEvent of toDelete ) {
-		await googleCalendarService.deleteEvent(
-			calendarsToSync[0],
-			deleteEvent.id,
-		);
-	}
-
-	console.log('Update: ' , toUpdate, '\n\nCreate: ', toCreate, '\n\nDelete: ', toDelete);
+	await iterate(callbacks)
+	.parallel(5, (item: any) => item());
 }
 
 execute();
+
+function deleteGoogleEvent(service: GoogleCalendarService, calendar: string, event: GoogleCalendarEvent){
+	return service.deleteEvent(calendar, event.id);
+}
+
+function createGoogleEvent(service: GoogleCalendarService, calendar: string, holiday: SignedHoliday){
+	return service.createEvent(
+		calendar,
+		`Vacation ${holiday.user.name} ${holiday.user.surname}`,
+		generateDescription(holiday.signature),
+		holiday.vacation[0],
+		getEndPeriodDate(holiday.vacation[holiday.vacation.length - 1]),
+	);
+}
+
+function updateGoogleEvent(service: GoogleCalendarService, calendar: string, leave: VacationAndEvent){
+	return service.updateEvent(
+		calendar,
+		leave.event.id,
+		`Vacation ${leave.holiday.user.name} ${leave.holiday.user.surname}`,
+		generateDescription(leave.holiday.signature),
+		leave.holiday.vacation[0],
+		getEndPeriodDate(leave.holiday.vacation[leave.holiday.vacation.length - 1]),
+	);
+}
+
+function getEndPeriodDate(date: string) {
+	const endDate = new Date(date);
+	endDate.setDate(endDate.getDate() + 1);
+
+	return endDate.getFullYear()  + '-' + (endDate.getMonth() + 1) + '-' + endDate.getDate();
+}
 
 async function getSesametimeHolidays(credentialsService: CredentialsService) {
 	const sesametimeCredentials = await credentialsService.getSesametimeToken();

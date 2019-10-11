@@ -13,7 +13,7 @@ import * as request from 'request-promise-native';
 import {iterate} from 'iterated-pipes';
 import {CredentialsService} from './credentials_service';
 import {GoogleCalendarService, GoogleCalendarEvent} from './google_calendar_service';
-import {SesametimeService} from './sesametime_service';
+import {SesametimeService, SesameUserWithVacations} from './sesametime_service';
 import {matchEventHolidays, SignedHoliday} from './event_holiday_matcher';
 
 type VacationAndEvent = {holiday: SignedHoliday, event: GoogleCalendarEvent};
@@ -22,32 +22,47 @@ async function execute() {
 
 	const credentialsService = new CredentialsService('./credentials.json', request);
 
-	const googleCredentials = await credentialsService.getGoogleToken();
-	const googleCalendarService = new GoogleCalendarService(request, googleCredentials);
+	const vacations = await getSesametimeHolidays(credentialsService);
 
-	const calendarsToSync = await credentialsService.getCalendarToSync();
+	const calendars = await credentialsService.getCalendarToSync();
 
-	const events = await googleCalendarService.getAllEvents(calendarsToSync[0]);
+	const callbacks = [];
 
-	const holidays = await getSesametimeHolidays(credentialsService);
-
-	const {toUpdate, toCreate, toDelete} = matchEventHolidays(events, holidays);
-
-	const updateCallbacks = toUpdate
-	.map(event => () => updateGoogleEvent(googleCalendarService, calendarsToSync[0], event));
-
-	const createCallbacks = toCreate
-	.map(event => () => createGoogleEvent(googleCalendarService, calendarsToSync[0], event));
-
-	const deleteCallbacks = toDelete
-	.map(event => () => deleteGoogleEvent(googleCalendarService, calendarsToSync[0], event));
-
-	const callbacks = updateCallbacks.concat(createCallbacks, deleteCallbacks);
-
-	console.log('Update: ' , toUpdate.length, '\n\nCreate: ', toCreate.length, '\n\nDelete: ', toDelete.length);
+	for (const calendar of calendars) {
+		const changes = await getChangesFromCalendar(credentialsService, vacations, calendar);
+		callbacks.push(...changes);
+	}
 
 	await iterate(callbacks)
 	.parallel(5, (item: any) => item());
+}
+
+async function getChangesFromCalendar(credentials: CredentialsService, vacations: SesameUserWithVacations[], calendar: string) {
+	const googleCredentials = await credentials.getGoogleToken();
+
+	const googleCalendarService = new GoogleCalendarService(request, googleCredentials);
+
+	const events = await googleCalendarService.getAllEvents(calendar);
+
+	const {toUpdate, toCreate, toDelete} = matchEventHolidays(events, vacations);
+
+	const updateCallbacks = toUpdate
+	.map(event => () => updateGoogleEvent(googleCalendarService, calendar, event));
+
+	const createCallbacks = toCreate
+	.map(event => () => createGoogleEvent(googleCalendarService, calendar, event));
+
+	const deleteCallbacks = toDelete
+	.map(event => () => deleteGoogleEvent(googleCalendarService, calendar, event));
+
+	console.log(
+		'\nCalendar: ', calendar,
+		'\nUpdate: ', toUpdate.length,
+		'\nCreate: ', toCreate.length,
+		'\nDelete: ', toDelete.length,
+	);
+
+	return updateCallbacks.concat(createCallbacks, deleteCallbacks);
 }
 
 execute();

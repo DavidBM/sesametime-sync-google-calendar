@@ -32,14 +32,15 @@ export function matchEventHolidays(calendarEvents: GoogleCalendarEvent[], sesame
 }
 
 function match(calendarEvents: GoogleCalendarEvent[], holiday: SignedHoliday) {
-	return calendarEvents.filter(event => event.description.includes(holiday.signature));
+	return calendarEvents.filter(event => event.description && event.description.includes(holiday.signature));
 }
 
 function findUnmatched(calendarEvents: GoogleCalendarEvent[], holidays: SignedHoliday[]) {
 	return calendarEvents
-	.filter(event => !holidays.some(holiday => event.description.includes(holiday.signature)))
+	.filter(event => !holidays.some(holiday => event.description && event.description.includes(holiday.signature)))
 	.filter(event => {
-		return event.description.includes('Do not modify this text.')
+		return event.description
+		&& event.description.includes('Do not modify this text.')
 		&& event.description.includes('%%%%%~~~~~%%%%%~~~~~%%%%%')
 		&& event.description.includes('-event-id:');
 	});

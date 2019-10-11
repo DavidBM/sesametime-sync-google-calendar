@@ -5,11 +5,10 @@ type GoogleListEventsResponse = {
 export type GoogleCalendarEvent = {
 	kind: string;
 	id: string;
-	htmlLink: string;
 	created: string;
 	updated: string;
 	summary: string;
-	description: string;
+	description: string | undefined;
 };
 
 export class GoogleCalendarService {
@@ -118,11 +117,9 @@ function isGoogleCalendarEvent(response: unknown): response is GoogleCalendarEve
 
 	if (typeof object.kind !== 'string') return false;
 	if (typeof object.id !== 'string') return false;
-	if (typeof object.htmlLink !== 'string') return false;
 	if (typeof object.created !== 'string') return false;
 	if (typeof object.updated !== 'string') return false;
 	if (typeof object.summary !== 'string') return false;
-	if (typeof object.description !== 'string') return false;
 
 	return true;
 }

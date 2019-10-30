@@ -15,6 +15,7 @@ import {CredentialsService} from './credentials_service';
 import {GoogleCalendarService, GoogleCalendarEvent} from './google_calendar_service';
 import {SesametimeService, SesameUserWithVacations} from './sesametime_service';
 import {matchEventHolidays, SignedHoliday} from './event_holiday_matcher';
+import * as Progress from 'cli-progress';
 
 type VacationAndEvent = {holiday: SignedHoliday, event: GoogleCalendarEvent};
 
@@ -33,8 +34,18 @@ async function execute() {
 		callbacks.push(...changes);
 	}
 
+	const bar = new Progress.Bar({}, Progress.Presets.shades_classic);
+
+	bar.start(callbacks.length, 0);
+
 	await iterate(callbacks)
-	.parallel(5, (item: any) => item());
+	.parallel(2, async (item: any) => {
+		let result = await retryIfFails(item);
+		bar.increment(1);
+		return result;
+	});
+
+	bar.stop();
 }
 
 async function getChangesFromCalendar(credentials: CredentialsService, vacations: SesameUserWithVacations[], calendar: string) {
@@ -66,6 +77,21 @@ async function getChangesFromCalendar(credentials: CredentialsService, vacations
 }
 
 execute();
+
+function retryIfFails(fn: any, timeout = 0) {
+	return new Promise((resolve, reject) => {
+		setTimeout(async () => {
+			try {
+				await fn().then(resolve)
+			} catch(_) {
+				timeout = timeout ? timeout * 2 : 1000;
+				if(timeout > 16000) return reject();
+				retryIfFails(fn, timeout).then(resolve).catch(reject);
+			}
+		}, timeout);
+	})
+
+}
 
 function deleteGoogleEvent(service: GoogleCalendarService, calendar: string, event: GoogleCalendarEvent){
 	return service.deleteEvent(calendar, event.id);
@@ -101,8 +127,9 @@ function getEndPeriodDate(date: string) {
 
 async function getSesametimeHolidays(credentialsService: CredentialsService) {
 	const sesametimeCredentials = await credentialsService.getSesametimeToken();
+	const excludedEmails = await credentialsService.calendarsWithoutLocalHolidays();
 
-	const sesametimeService = new SesametimeService(request, sesametimeCredentials);
+	const sesametimeService = new SesametimeService(request, sesametimeCredentials, excludedEmails);
 
 	return await sesametimeService.getAllUsersVacations();
 }

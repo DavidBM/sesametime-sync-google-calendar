@@ -18,6 +18,8 @@ type SesameUserVacation = {
 	data: Array<string> | null,
 	year: string,
 	name: string,
+	id: string,
+	type: string,
 };
 
 export type SesameUserWithVacations = {
@@ -29,14 +31,16 @@ export class SesametimeService {
 	constructor(
 		private httpService: HttpService,
 		private token: string,
+		private excludedUsersFromLocalHolidaysEmails: string[],
 	) { }
 
 	async getAllUsersVacations(): Promise<SesameUserWithVacations[]> {
 		const users = await this.getUsers();
 
 		return await Promise.all(users.map(user => {
-			return this.getUserVacations(user.id)
-			.then(vacation => ({ user, vacation }));
+			let excludeLocalHolidays = this.excludedUsersFromLocalHolidaysEmails.includes(user.email)
+			return this.getUserVacations(user.id, excludeLocalHolidays)
+			.then(vacation => ({ user, vacation }))
 		}));
 	}
 
@@ -54,7 +58,7 @@ export class SesametimeService {
 		return parsedResponse.data.map(d => d.User);
 	}
 
-	async getUserVacations(userId: string) {
+	async getUserVacations(userId: string, excludeLocalHolidays: boolean = false) {
 		const response = await this.httpService.post('https://api.sesametime.com/v2/vacation/getVacations', {
 			headers: {Authorization: this.token},
 			json: { userId },
@@ -68,7 +72,8 @@ export class SesametimeService {
 
 		response.data
 		.filter(current => Array.isArray(current.Vacation.data))
-		.filter(current => current.Vacation.name !== 'Fines de semana')
+		.filter(current => current.Vacation.id !== '5cda9b7f-5898-40f2-91be-061d5e17cf21')
+		.filter(current => !excludeLocalHolidays || current.Vacation.type === 'main')
 		.forEach(current => accumulator.push(...(current.Vacation.data as Array<string>)));
 
 		const vacations = autoattachHolidays(accumulator);
@@ -80,6 +85,8 @@ export class SesametimeService {
 function autoattachHolidays(dates: Array<string>) {
 	const groups = [];
 	let attached: string[] = [];
+
+	dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime() );
 
 	for (const date of dates) {
 		if (attached.length === 0) {

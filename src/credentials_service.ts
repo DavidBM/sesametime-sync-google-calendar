@@ -6,6 +6,7 @@ type credentialsFile = {
 	google_calendar_client_secret: string,
 	sesame_token: string,
 	calendars_to_sync: Array<string>,
+	excluded_users_from_local_holidays: Array<string>,
 };
 
 type refresingTokenResponse = {
@@ -34,6 +35,11 @@ export class CredentialsService implements Credentials{
 	async getCalendarToSync() {
 		const content = await this.loadingFilePromise;
 		return content.calendars_to_sync;
+	}
+
+	async calendarsWithoutLocalHolidays() {
+		const content = await this.loadingFilePromise;
+		return content.excluded_users_from_local_holidays;
 	}
 
 	async getGoogleToken() {

@@ -20,7 +20,8 @@ The file must look like:
     "google_calendar_app_id": "Google OAuth App id. Can be created in  https://console.cloud.google.com/",
     "google_calendar_client_secret": "Same as google_calendar_app_id, but the OAuth secret",
     "sesame_token": "Can be generated from the sesametime.com web interface",
-    "calendars_to_sync": ["id of the calendars to sync", "one per string in the array"]
+    "calendars_to_sync": ["id of the calendars to sync", "one per string in the array", "they look like very long emails like verylingthing@@group.calendar.google.com or like your normal email for your personal calendar."],
+    "excluded_users_from_local_holidays": ["user1@email.com", "user2@email2.com"]
 }
 
 ```

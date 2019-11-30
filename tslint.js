@@ -1,4 +1,4 @@
-{
+module.exports = {
     "defaultSeverity": "error",
     "extends": [
         "tslint:recommended"
@@ -40,8 +40,7 @@
         "no-empty": false,
         "arrow-parens": false,
         "object-literal-sort-keys": false,
-        "no-unused-expression": false,
-	"interface-over-type-literal": false,
+        "interface-over-type-literal": false,
         "max-classes-per-file": [
             false
         ],
@@ -56,5 +55,4 @@
         ]
     },
     "rulesDirectory": []
-}
-
+};

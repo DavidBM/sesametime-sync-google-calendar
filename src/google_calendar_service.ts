@@ -7,7 +7,6 @@ export type GoogleCalendarEvent = {
 	id: string;
 	created: string;
 	updated: string;
-	summary: string;
 	description: string | undefined;
 };
 
@@ -39,8 +38,6 @@ export class GoogleCalendarService {
 		});
 
 		const parsedResponse = JSON.parse(response);
-
-		isGoogleListEventsResponse(parsedResponse);
 
 		if (!isGoogleListEventsResponse(parsedResponse)) {
 			throw new Error('Unable to get event list from Google Calendar. Response: ' + response);
@@ -119,7 +116,7 @@ function isGoogleCalendarEvent(response: unknown): response is GoogleCalendarEve
 	if (typeof object.id !== 'string') return false;
 	if (typeof object.created !== 'string') return false;
 	if (typeof object.updated !== 'string') return false;
-	if (typeof object.summary !== 'string') return false;
+	// if (typeof object.summary !== 'string') return false;
 
 	return true;
 }
